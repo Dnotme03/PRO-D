@@ -83,7 +83,7 @@ def run_server():
 if __name__ == "__main__":
     banner()
 
-    # ----- Old menu -----
+    # ----- menu -----
     print(f"""{pink}
 ╔══════════════════════════════╗
 ║ {cyan}Choose Page Template{pink}        
