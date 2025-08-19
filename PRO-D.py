@@ -93,6 +93,6 @@ if __name__ == "__main__":
 ╚══════════════════════════════╝
 {reset}""")
     choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
-    selected_html = "1.html" if choice == "1" else "2.html"
+    selected_html = "11.html" if choice == "1" else "2.html"
 
     run_server()
