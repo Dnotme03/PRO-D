@@ -4,9 +4,9 @@ import subprocess
 import logging
 import time
 
-# -------- Auto-install modules if missing --------
+# ---------------- Auto-install modules ----------------
 def install(package):
-    os.system(f"{sys.executable} -m pip install {package}")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
 try:
     from flask import Flask, send_from_directory
@@ -15,97 +15,64 @@ except ModuleNotFoundError:
     install("flask")
     from flask import Flask, send_from_directory
 
-# -------- Colors --------
-red = '\033[1;31m'
-grn = '\033[1;32m'
-ylo = '\033[1;33m'
-cyan = '\033[1;36m'
-pink = '\033[1;35m'
-reset = '\033[0m'
+try:
+    from pyngrok import ngrok
+except ModuleNotFoundError:
+    print("Installing pyngrok...")
+    install("pyngrok")
+    from pyngrok import ngrok
 
-# -------- Suppress default Flask logs --------
+# ---------------- Terminal colors ----------------
+RED = '\033[1;31m'
+GREEN = '\033[1;32m'
+YELLOW = '\033[1;33m'
+CYAN = '\033[1;36m'
+RESET = '\033[0m'
+
+# ---------------- Suppress Flask logs ----------------
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-# -------- Banner --------
-def banner():
-    os.system("clear")
-    print(f"""{red}
-██████╗ ██████╗  ██████╗     {cyan}██████╗ 
-██╔══██╗██╔══██╗██╔═══██╗    {cyan}██╔══██╗
-██████╔╝██████╔╝██║   ██║    {cyan}██████╔╝
-██╔═══╝ ██╔═══╝ ██║   ██║    {cyan}██╔═══╝ 
-██║     ██║     ╚██████╔╝    {cyan}██║     
-╚═╝     ╚═╝      ╚═════╝     {cyan}╚═╝     
-{reset}""")
-    print(f"{pink}══════════════════════════════════════{reset}")
-    print(f"{ylo} PRO D  |  Made by Dhani")
-    print(f"{pink}══════════════════════════════════════{reset}\n")
+# ---------------- Clear terminal & banner ----------------
+def clear():
+    os.system('cls' if os.name == 'nt' else 'clear')
 
-# -------- Flask App --------
+def banner():
+    clear()
+    print(f"""{RED}
+██████╗ ██████╗  ██████╗     
+██╔══██╗██╔══██╗██╔═══██╗    
+██████╔╝██████╔╝██║   ██║    
+██╔═══╝ ██╔═══╝ ██║   ██║    
+██║     ██║     ╚██████╔╝    
+╚═╝     ╚═╝      ╚═════╝     
+{CYAN}Professional Python Server{RESET}""")
+    print(f"{YELLOW}Made by: Your Dev Friend{RESET}\n")
+
+# ---------------- Flask setup ----------------
 app = Flask(__name__)
-selected_html = "1.html"  # default HTML file
+selected_html = "1.html"
 
 @app.route('/')
 def home():
     return send_from_directory(".", selected_html)
 
-# -------- Start PHP server in background --------
-def start_php_server():
-    print(f"{grn}Starting PHP server on http://127.0.0.1:8080 ...{reset}")
-    if os.name == "nt":  # Windows
-        subprocess.Popen(["php", "-S", "127.0.0.1:8080"], shell=True)
-    else:  # Linux / Termux / Mac
-        subprocess.Popen(["php", "-S", "127.0.0.1:8080"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-# -------- Start LocalTunnel and get public URL --------
-def start_localtunnel():
-    print(f"{grn}Starting LocalTunnel to get public URL...{reset}")
-    process = subprocess.Popen(
-        ["lt", "--port", "8080"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True
-    )
-
-    public_url = None
-    while True:
-        line = process.stdout.readline()
-        if not line:
-            break
-        if "https://" in line:
-            public_url = line.strip()
-            break
-
-    if public_url:
-        print(f"""{grn}
-╔═══════════════════════════════════╗
-║ {cyan}SERVER RUNNING...               {grn}║
-╠═══════════════════════════════════╣
-║ {ylo}Local: http://127.0.0.1:8080       {grn}║
-║ {ylo}Public: {public_url}       {grn}║
-╚═══════════════════════════════════╝
-{reset}""")
-    else:
-        print(f"{red}Failed to get public URL from LocalTunnel.{reset}")
-
-# -------- Main --------
+# ---------------- Run ----------------
 if __name__ == "__main__":
     banner()
 
     # Choose template
-    print(f"""{pink}
-╔══════════════════════════════╗
-║ {cyan}Choose Page Template{pink}        ║
-╠══════════════════════════════╣
-║ [1] Page One                  ║
-║ [2] Page Two                  ║
-╚══════════════════════════════╝
-{reset}""")
-    choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
+    choice = input(f"{YELLOW}Choose Page Template [1/2]: {RESET}").strip()
     selected_html = "1.html" if choice == "1" else "2.html"
 
-    # Start PHP server and LocalTunnel
-    start_php_server()
-    time.sleep(2)  # give server time to start
-    start_localtunnel()
+    # Server port
+    port = 8080
+
+    # Start ngrok tunnel
+    print(f"{CYAN}Starting public tunnel via ngrok...{RESET}")
+    public_url = ngrok.connect(port)
+    print(f"{GREEN}Public URL is ready: {public_url}{RESET}")
+    print(f"{GREEN}Local URL: http://127.0.0.1:{port}{RESET}")
+
+    # Run Flask
+    app.run(host="127.0.0.1", port=port, debug=False)
