@@ -1,4 +1,0 @@
-colorama
-pyfiglet
-rich
-pip install -r requirements.txt
