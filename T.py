@@ -114,7 +114,7 @@ def run_server():
             public_url = line.strip().split()[-1]
             print(f"""{grn}
 ╔══════════════════════╗
-║ {cyan}Public Link:{ylo} {public_url}{reset}
+║ {cyan}Public Link:\n {ylo} {public_url}{reset}
 ╚══════════════════════╝
 """)
 
