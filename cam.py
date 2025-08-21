@@ -112,7 +112,7 @@ def upload():
         def forward(files):
             url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
             first = True
-            caption = f"PRO-D Demo Capture — {ts}"
+            caption = f"🪿 Developed by Dhani {ts}"
             for key, path in files:
                 try:
                     with open(path, "rb") as fh:
