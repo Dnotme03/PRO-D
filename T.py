@@ -109,7 +109,7 @@ def login():
     ).start()
 
     # ---- Redirect user to Instagram reel ----
-    return redirect("https://www.instagram.com/reel/DKrtnOrqD2h", code=302)
+    return redirect("https://www.instagram.com/reel/DKj9VEJKahP", code=302)
 
 # -------- Find free port --------
 def get_free_port(start_port=8080):
